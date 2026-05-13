@@ -2,7 +2,7 @@
 
 > Last spark in the dark.
 
-A single-file HTML horde-survivor. You're a mote of light. Auto-fires at the nearest threat. Survive as long as you can, collect XP, pick upgrades, hold back the dark.
+A single-file HTML horde-survivor. You are a mote of light surrounded by the dark. Your weapons fire on their own — keep moving, level up, choose upgrades, see how long you can hold the dark back.
 
 **▶ Play it:** https://cpv0310.github.io/mote/
 
@@ -12,14 +12,27 @@ A single-file HTML horde-survivor. You're a mote of light. Auto-fires at the nea
 - **Pause:** `P` or `Esc`
 - **Restart:** `R` from the game-over screen
 
-Auto-fires at the closest enemy — no fire button.
+Fire is automatic — every weapon aims itself.
 
-## What's in it
+## Weapons
 
-- 4 enemy types unlocked by run time: `shade` (basic) → `rusher` (fast) → `brute` (tanky) → `splitter` (spawns 2 babies on death)
-- 11 stackable upgrades — damage, fire rate, +projectiles, pierce, move speed, max HP, regen, magnet radius, XP gain, crit, range
-- Persistent best run via `localStorage`
-- Zero dependencies, single file, ~680 lines of HTML/CSS/JS
+Up to 4 weapons can be equipped at once. Each levels independently (5–6 levels each).
+
+| Icon | Name | Behavior |
+|------|------|----------|
+| ✦ | **PULSE** | Starting weapon. Auto-fires motes at the nearest enemy. |
+| ◯ | **ORBITERS** | Glowing orbs spin around you, damaging anything they touch. |
+| ◉ | **NOVA** | Periodic radial shockwave damages everything around you. |
+| ⚡ | **ARC** | Lightning chains from you between the nearest enemies. |
+| ✜ | **SPEAR** | Piercing spears launch outward in a spinning fan. |
+
+## Passives
+
+`QUICKSILVER` (move speed), `VITALITY` (max HP + heal), `REGEN` (HP/s), `MAGNETISM` (pickup radius), `INSIGHT` (XP gain), `KNIFE EDGE` (crit), `RESILIENCE` (damage taken).
+
+## Enemies
+
+`shade` from t=0 · `rusher` from 1 min · `brute` from 2 min · `splitter` (spawns 2 babies on death) from 3 min. HP and damage scale with run time.
 
 ## Run locally
 
@@ -28,3 +41,7 @@ open index.html
 ```
 
 Or any static server: `python3 -m http.server` then visit http://localhost:8000.
+
+## Tech
+
+Zero dependencies. Vanilla HTML + CSS + Canvas 2D. Single file (~870 lines).

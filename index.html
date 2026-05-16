@@ -87,8 +87,11 @@
   #right-hud .row { background: #0a0f24aa; border: 1px solid #1f2a52; border-radius: 6px; padding: 4px 8px; display: inline-block; margin-bottom: 4px; }
   .pill { color: #ffd76a; }
 
-  #weapon-strip {
+  #bottom-bar {
     grid-column: 1 / 4; grid-row: 3; justify-self: center; align-self: end;
+    display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; justify-content: center;
+  }
+  #weapon-strip {
     display: flex; gap: 8px; padding: 6px 8px;
     background: #0a0f24aa; border: 1px solid #1f2a52; border-radius: 8px;
   }
@@ -102,6 +105,38 @@
     font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;
   }
   .wslot.empty { color: #2a345f; }
+
+  #scream-meter {
+    background: #0a0f24aa; border: 1px solid #1f2a52; border-radius: 8px;
+    padding: 6px 10px; min-width: 220px; display: flex; flex-direction: column; justify-content: center;
+    font-size: 11px; letter-spacing: 0.16em; color: #aab3d8;
+  }
+  #scream-meter .label { display: flex; justify-content: space-between; align-items: center; }
+  #scream-meter .label .ico { color: #ff5b6e; font-size: 14px; }
+  #scream-meter .bar {
+    height: 6px; background: #0d1430; border-radius: 3px; overflow: hidden; margin: 4px 0 3px;
+  }
+  #scream-meter .fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #5a3a8a, #ff5b6e);
+    transition: width .15s linear;
+  }
+  #scream-meter .prompt { color: #6c759b; font-size: 10px; text-align: center; }
+  #scream-meter.ready { border-color: #ffd76a; box-shadow: 0 0 14px #ffd76a44; }
+  #scream-meter.ready .fill {
+    background: linear-gradient(90deg, #ffd76a, #ffffff);
+    box-shadow: 0 0 10px #ffd76a;
+  }
+  #scream-meter.ready .prompt { color: #ffd76a; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.55 } }
+
+  #mute-btn {
+    position: fixed; top: 12px; right: 12px; z-index: 7;
+    background: #0a0f24aa; border: 1px solid #1f2a52; color: #aab3d8;
+    width: 32px; height: 32px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 14px;
+  }
+  #mute-btn:hover { color: #fff; border-color: #6aa9ff; }
 
   #joystick {
     position: fixed; left: 0; bottom: 0; width: 50vw; height: 40vh;
@@ -133,8 +168,17 @@
   <div id="right-hud">
     <div class="row">kills <span class="pill" id="kills-text">0</span></div>
   </div>
-  <div id="weapon-strip"></div>
+  <div id="bottom-bar">
+    <div id="weapon-strip"></div>
+    <div id="scream-meter">
+      <div class="label"><span class="ico">⚠</span><span>SONIC SCREAM</span><span id="scream-pct">0%</span></div>
+      <div class="bar"><div class="fill" id="scream-fill"></div></div>
+      <div class="prompt" id="scream-prompt">CHARGING…</div>
+    </div>
+  </div>
 </div>
+
+<button id="mute-btn" title="Toggle mute (M)">♪</button>
 
 <div id="joystick"><div class="base"></div><div class="stick"></div></div>
 
@@ -164,16 +208,19 @@
         <div><span class="label">PAUSE</span><span class="kbd">P</span> or <span class="kbd">Esc</span></div>
         <div><span class="label">RESTART</span><span class="kbd">R</span> on game over</div>
         <div><span class="label">FIRE</span><b style="color:#ffd76a">automatic</b> — aims at nearest threat</div>
+        <div><span class="label">SCREAM</span><span class="kbd">SPACE</span> — fire when charged (30s)</div>
+        <div><span class="label">MUTE</span><span class="kbd">M</span> — toggle sound</div>
       </div>
     </div>
 
     <div class="panel">
-      <h3>WEAPONS (5)</h3>
+      <h3>WEAPONS (5 + 1 ult)</h3>
       <div class="row"><span class="ico" style="color:#fff">✦</span><div><b>PULSE</b><br/><span class="desc">Your starting weapon. Auto-fires motes at the nearest enemy.</span></div></div>
       <div class="row"><span class="ico" style="color:#a4d2ff">◯</span><div><b>ORBITERS</b><br/><span class="desc">Glowing orbs spin around you, damaging anything they touch.</span></div></div>
       <div class="row"><span class="ico" style="color:#ffb072">◉</span><div><b>NOVA</b><br/><span class="desc">Periodic radial shockwave damages everything around you.</span></div></div>
       <div class="row"><span class="ico" style="color:#ffd76a">⚡</span><div><b>ARC</b><br/><span class="desc">Lightning chains from you between the nearest enemies.</span></div></div>
       <div class="row"><span class="ico" style="color:#c97aff">✜</span><div><b>SPEAR</b><br/><span class="desc">Piercing spears launch outward in a spinning fan.</span></div></div>
+      <div class="row" style="margin-top:8px;padding-top:8px;border-top:1px dashed #2a345f"><span class="ico" style="color:#ff5b6e">⚠</span><div><b>SONIC SCREAM</b> <span style="color:#ffd76a;font-size:11px">[SPACE]</span><br/><span class="desc">Manual ultimate. Charges over 30s. Hits every enemy on screen for 10–100% of their max HP.</span></div></div>
     </div>
 
     <div class="panel">
@@ -243,18 +290,173 @@ const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 const len2 = (x, y) => x * x + y * y;
 const fmtTime = s => `${String((s/60)|0).padStart(2,"0")}:${String((s|0)%60).padStart(2,"0")}`;
 
+// ─────────────────────── sound system ───────────────────────
+// Web Audio: lazy-init on first user gesture (browsers gate it).
+// Mute toggled by M, persisted in localStorage. All SFX are synthesized.
+const SFX = {
+  ac: null, master: null,
+  muted: false, ready: false,
+  ensure() {
+    if (this.ac) return this.ac;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ac = new AC();
+      this.master = this.ac.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.7;
+      this.master.connect(this.ac.destination);
+      this.ready = true;
+    } catch (e) {}
+    return this.ac;
+  },
+  setMuted(m) {
+    this.muted = m;
+    try { localStorage.setItem("mote-muted", m ? "1" : "0"); } catch (e) {}
+    document.getElementById("mute-btn").textContent = m ? "♪̸" : "♪";
+    if (this.master) this.master.gain.value = m ? 0 : 0.7;
+  },
+  toggle() { this.setMuted(!this.muted); },
+  noiseBuffer(durSec) {
+    const len = (this.ac.sampleRate * durSec) | 0;
+    const buf = this.ac.createBuffer(1, len, this.ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return buf;
+  },
+  distortionCurve(k) {
+    const n = 1024, c = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      c[i] = ((3 + k) * x * 20 * Math.PI / 180) / (Math.PI + k * Math.abs(x));
+    }
+    return c;
+  },
+
+  hit() {
+    const ac = this.ensure(); if (!ac || this.muted) return;
+    const t = ac.currentTime;
+    const osc = ac.createOscillator(); osc.type = "square";
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(60, t + 0.18);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(g); g.connect(this.master);
+    osc.start(t); osc.stop(t + 0.2);
+  },
+
+  kill() {
+    const ac = this.ensure(); if (!ac || this.muted) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource(); src.buffer = this.noiseBuffer(0.12);
+    const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2400; bp.Q.value = 4;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    src.connect(bp); bp.connect(g); g.connect(this.master);
+    src.start(t); src.stop(t + 0.13);
+  },
+
+  levelUp() {
+    const ac = this.ensure(); if (!ac || this.muted) return;
+    const t = ac.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5];  // C5 E5 G5 C6
+    notes.forEach((f, i) => {
+      const osc = ac.createOscillator(); osc.type = "triangle";
+      osc.frequency.value = f;
+      const g = ac.createGain();
+      const t0 = t + i * 0.07;
+      g.gain.setValueAtTime(0.0, t0);
+      g.gain.linearRampToValueAtTime(0.28, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.30);
+      osc.connect(g); g.connect(this.master);
+      osc.start(t0); osc.stop(t0 + 0.32);
+    });
+  },
+
+  // ── METAL EAGLE SCREAM ───────────────────────────────────
+  // Recipe: pitched-down sawtooth + harmonic square through distortion,
+  // square-wave LFO on frequency for "metal growl", filtered noise burst
+  // for the airy screech attack, sweeping lowpass for shape.
+  scream() {
+    const ac = this.ensure(); if (!ac || this.muted) return;
+    const t = ac.currentTime;
+    const dur = 1.6;
+
+    // Per-call master with envelope
+    const out = ac.createGain();
+    out.gain.setValueAtTime(0.0, t);
+    out.gain.linearRampToValueAtTime(0.55, t + 0.04);
+    out.gain.setValueAtTime(0.55, t + 1.0);
+    out.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    out.connect(this.master);
+
+    // Distortion → sweeping LPF
+    const shaper = ac.createWaveShaper();
+    shaper.curve = this.distortionCurve(320); shaper.oversample = "4x";
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(8200, t);
+    lp.frequency.exponentialRampToValueAtTime(900, t + dur);
+    lp.Q.value = 5;
+    shaper.connect(lp); lp.connect(out);
+
+    // Primary saw — eagle shriek pitch contour: rise then fall
+    const o1 = ac.createOscillator(); o1.type = "sawtooth";
+    o1.frequency.setValueAtTime(900, t);
+    o1.frequency.exponentialRampToValueAtTime(1700, t + 0.15);
+    o1.frequency.exponentialRampToValueAtTime(380, t + dur * 0.9);
+    // Harmonic square at 1.5× for metallic edge
+    const o2 = ac.createOscillator(); o2.type = "square";
+    o2.frequency.setValueAtTime(1350, t);
+    o2.frequency.exponentialRampToValueAtTime(2550, t + 0.15);
+    o2.frequency.exponentialRampToValueAtTime(570, t + dur * 0.9);
+
+    // Square-LFO on freq → "metal growl"
+    const lfo = ac.createOscillator(); lfo.type = "square"; lfo.frequency.value = 22;
+    const lfoGain = ac.createGain(); lfoGain.gain.value = 90;
+    lfo.connect(lfoGain);
+    lfoGain.connect(o1.frequency); lfoGain.connect(o2.frequency);
+
+    const mix = ac.createGain(); mix.gain.value = 0.42;
+    o1.connect(mix); o2.connect(mix); mix.connect(shaper);
+
+    // Noise burst — airy "screech" attack
+    const noise = ac.createBufferSource(); noise.buffer = this.noiseBuffer(0.5);
+    const nbp = ac.createBiquadFilter(); nbp.type = "bandpass";
+    nbp.frequency.setValueAtTime(4500, t);
+    nbp.frequency.exponentialRampToValueAtTime(1200, t + 0.5);
+    nbp.Q.value = 3.5;
+    const ng = ac.createGain();
+    ng.gain.setValueAtTime(0.0, t);
+    ng.gain.linearRampToValueAtTime(0.55, t + 0.03);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    noise.connect(nbp); nbp.connect(ng); ng.connect(out);
+
+    o1.start(t); o2.start(t); lfo.start(t); noise.start(t);
+    o1.stop(t + dur); o2.stop(t + dur); lfo.stop(t + dur); noise.stop(t + 0.55);
+  },
+};
+try { SFX.muted = localStorage.getItem("mote-muted") === "1"; } catch (e) {}
+
 // ─────────────────────── input ───────────────────────
 const keys = new Set();
 window.addEventListener("keydown", e => {
   if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
   keys.add(e.key.toLowerCase());
-  if (e.key === " " && state === "title") startGame();
+  // SPACE: start game on title, otherwise fire scream when ready
+  if (e.key === " ") {
+    if (state === "title") startGame();
+    else if (state === "playing") tryFireScream();
+  }
   if ((e.key === "r" || e.key === "R") && state === "gameover") startGame();
   if ((e.key === "p" || e.key === "P" || e.key === "Escape") && (state === "playing" || state === "paused")) togglePause();
+  if (e.key === "m" || e.key === "M") SFX.toggle();
 });
 window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
 
 document.getElementById("begin-btn").addEventListener("click", () => { if (state === "title") startGame(); });
+document.getElementById("mute-btn").addEventListener("click", () => SFX.toggle());
+SFX.setMuted(SFX.muted);  // sync button glyph to persisted state
 
 const joyEl = document.getElementById("joystick");
 const joyBase = joyEl.querySelector(".base");
@@ -301,12 +503,14 @@ const WORLD = { w: 3000, h: 3000 };
 const cam = { x: 0, y: 0 };
 const WSLOT_MAX = 4;
 
-let player, enemies, bullets, gems, particles, shakes, novas, arcs;
+let player, enemies, bullets, gems, particles, shakes, novas, arcs, shockwaves;
 let state = "title";
 let runTime = 0, kills = 0, level = 1, xp = 0, xpNeed = 10;
 let spawnAcc = 0;
 let pendingLevelups = 0;
 let nextUid = 1;
+let screenFlash = 0;
+const SCREAM_MAX = 30;  // seconds to fully charge
 
 // ─────────────────────── weapons ───────────────────────
 //
@@ -540,6 +744,7 @@ function dealDamage(e, idx, dmg, fx, fy, crit, color) {
   spawnParticle(fx, fy, crit ? "#ffd76a" : (color || "#a4d2ff"), crit ? 7 : 3, 180, 0.35);
   if (e.hp <= 0) {
     kills += 1;
+    SFX.kill();
     spawnParticle(e.x, e.y, e.color, 12, 260, 0.7);
     for (let k = 0; k < e.xp; k++) spawnGem(e.x + rand(-6, 6), e.y + rand(-6, 6), 1);
     if (e.splits > 0) {
@@ -569,11 +774,41 @@ function makePlayer() {
     hp: 100, stats: baseStats(),
     invuln: 0, hitFlash: 0,
     weapons: [],
+    screamCharge: 0,  // 0..SCREAM_MAX; fires at full
   };
   const pulse = makeWeapon("pulse");
   pulse.level = 1;
   p.weapons.push(pulse);
   return p;
+}
+
+// ─────────────────────── SONIC SCREAM ───────────────────────
+// Manual ultimate, fired with SPACE when charge is full.
+// Damages every enemy currently inside the camera viewport for a
+// random 10-100% of their max HP. Big visual shockwave + sound.
+function tryFireScream() {
+  if (!player || player.screamCharge < SCREAM_MAX) return;
+  player.screamCharge = 0;
+  SFX.scream();
+  shake(28);
+  screenFlash = 0.5;
+  // Damage all on-screen enemies
+  const padX = 40, padY = 40;  // include slight overhang past the camera edge
+  const minX = cam.x - padX, maxX = cam.x + W + padX;
+  const minY = cam.y - padY, maxY = cam.y + H + padY;
+  for (let j = enemies.length - 1; j >= 0; j--) {
+    const e = enemies[j];
+    if (e.x < minX || e.x > maxX || e.y < minY || e.y > maxY) continue;
+    const pct = rand(0.10, 1.00);
+    const dmg = e.maxHP * pct;
+    dealDamage(e, j, dmg, e.x, e.y, false, "#ff5b6e");
+  }
+  // Visual shockwave — expands across the screen
+  const screenR = Math.hypot(W, H) * 0.6;
+  shockwaves.push({
+    x: player.x, y: player.y, r: 20, max: screenR,
+    life: 0.7, maxLife: 0.7,
+  });
 }
 
 function spawnEnemy() {
@@ -617,15 +852,16 @@ function shake(amount) { shakes.push({ amount, life: 0.25, max: 0.25 }); }
 // ─────────────────────── game flow ───────────────────────
 function startGame() {
   player = makePlayer();
-  enemies = []; bullets = []; gems = []; particles = []; shakes = []; novas = []; arcs = [];
+  enemies = []; bullets = []; gems = []; particles = []; shakes = []; novas = []; arcs = []; shockwaves = [];
   state = "playing"; runTime = 0; kills = 0; level = 1; xp = 0; xpNeed = 10;
-  spawnAcc = 0; pendingLevelups = 0; nextUid = 1;
+  spawnAcc = 0; pendingLevelups = 0; nextUid = 1; screenFlash = 0;
   for (const k in passiveCount) delete passiveCount[k];
   document.getElementById("title").classList.remove("on");
   document.getElementById("gameover").classList.remove("on");
   document.getElementById("levelup").classList.remove("on");
   document.getElementById("paused").classList.remove("on");
   refreshWeaponStrip();
+  SFX.ensure();  // warm up audio on the start gesture
 }
 
 function togglePause() {
@@ -813,6 +1049,7 @@ function update(dt) {
       player.hp -= dmg;
       player.invuln = 0.6; player.hitFlash = 0.25;
       shake(8);
+      SFX.hit();
       spawnParticle(player.x, player.y, "#ff5b6e", 8, 220, 0.5);
       if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
     }
@@ -846,6 +1083,17 @@ function update(dt) {
     arcs[i].life -= dt;
     if (arcs[i].life <= 0) arcs.splice(i, 1);
   }
+  // scream charge + shockwave + flash
+  if (player.screamCharge < SCREAM_MAX) {
+    player.screamCharge = Math.min(SCREAM_MAX, player.screamCharge + dt);
+  }
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const sw = shockwaves[i];
+    sw.life -= dt;
+    sw.r = sw.max * (1 - sw.life / sw.maxLife);
+    if (sw.life <= 0) shockwaves.splice(i, 1);
+  }
+  if (screenFlash > 0) screenFlash = Math.max(0, screenFlash - dt * 2);
 
   const pickR2 = s.pickup * s.pickup;
   for (let i = gems.length - 1; i >= 0; i--) {
@@ -864,6 +1112,7 @@ function update(dt) {
         xp -= xpNeed;
         xpNeed = Math.round(xpNeed * 1.45 + 5);
         pendingLevelups += 1;
+        SFX.levelUp();
       }
       if (pendingLevelups > 0 && state === "playing") showLevelUp();
     }
@@ -894,6 +1143,15 @@ function updateHUD() {
   document.getElementById("xp-fill").style.width = (xp / xpNeed * 100) + "%";
   document.getElementById("time").textContent = fmtTime(runTime);
   document.getElementById("kills-text").textContent = kills;
+  // scream meter
+  const pct = player.screamCharge / SCREAM_MAX;
+  const ready = pct >= 1;
+  document.getElementById("scream-fill").style.width = (pct * 100) + "%";
+  document.getElementById("scream-pct").textContent = ready
+    ? "READY"
+    : `${Math.ceil(SCREAM_MAX - player.screamCharge)}s`;
+  document.getElementById("scream-prompt").textContent = ready ? "[SPACE] SCREAM" : "CHARGING…";
+  document.getElementById("scream-meter").classList.toggle("ready", ready);
 }
 
 // ─────────────────────── render ───────────────────────
@@ -939,6 +1197,20 @@ function render() {
     ctx.shadowColor = n.color; ctx.shadowBlur = 18;
     ctx.lineWidth = 4 * a + 1;
     ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // SCREAM shockwaves — big bright concentric rings
+  for (const sw of shockwaves) {
+    const a = sw.life / sw.maxLife;
+    ctx.shadowColor = "#ff5b6e"; ctx.shadowBlur = 30;
+    for (let k = 0; k < 3; k++) {
+      const off = k * 14;
+      ctx.strokeStyle = k === 0 ? "#ffffff" : (k === 1 ? "#ffd76a" : "#ff5b6e");
+      ctx.globalAlpha = a * (1 - k * 0.25);
+      ctx.lineWidth = 6 - k * 1.5;
+      ctx.beginPath(); ctx.arc(sw.x, sw.y, Math.max(0, sw.r - off), 0, TAU); ctx.stroke();
+    }
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   }
 
@@ -1018,6 +1290,12 @@ function render() {
   const grd = ctx.createRadialGradient(W/2, H/2, Math.min(W,H) * 0.4, W/2, H/2, Math.max(W,H) * 0.75);
   grd.addColorStop(0, "rgba(0,0,0,0)"); grd.addColorStop(1, "rgba(0,0,0,0.6)");
   ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+
+  // SCREAM screen flash (white wash over everything)
+  if (screenFlash > 0) {
+    ctx.fillStyle = `rgba(255,255,255,${screenFlash})`;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 // ─────────────────────── main loop ───────────────────────
@@ -1042,7 +1320,7 @@ try {
 } catch (e) {}
 
 player = makePlayer();
-enemies = []; bullets = []; gems = []; particles = []; shakes = []; novas = []; arcs = [];
+enemies = []; bullets = []; gems = []; particles = []; shakes = []; novas = []; arcs = []; shockwaves = [];
 refreshWeaponStrip();
 </script>
 </body>
